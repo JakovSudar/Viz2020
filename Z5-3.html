@@ -9,22 +9,19 @@
    <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.4.1/jquery.min.js"></script>   
 	<script src="https://cdnjs.cloudflare.com/ajax/libs/popper.js/1.14.7/umd/popper.min.js" integrity="sha384-UO2eT0CpHqdSJQ6hJty5KVphtPhzWj9WO1clHTMGa3JDZwrnQq4sF86dIHNDz0W1" crossorigin="anonymous"></script>
 	<script src="https://stackpath.bootstrapcdn.com/bootstrap/4.3.1/js/bootstrap.min.js" integrity="sha384-JjSmVgyd0p3pXB1rRibZUAYoIIy6OrQ6VrjIEaFf/nJGzIxFDsf4x0xIM+B07jRM" crossorigin="anonymous"></script>
-    <title>Zadatak 3.</title>
+    <title>Vizualizacija podataka</title>
 </head>
-<style>
-	#show{
-		background-color: aqua;
-		font-size:xx-large;
-	}
-</style>
 <body>	
-	<div id="main" class="container">
-
-		<div id="show" style="z-index: 5; position:absolute"></div>
+	<div>
+		<div  id="show" style="z-index: 5; position:absolute"></div>
+		<div id="main"></div>
+		<div class="graf">
+			graf
+		</div>
 	</div>
     
-    <script>     
-		var color = d3.scale.category20();
+    <script>   
+		
 		var width = 960;
 		var height = 700;
 		var projection = d3.geo.mercator()
@@ -49,27 +46,27 @@
 
  			var states = svg.selectAll("path.county")
  			.data(data.features)
- 			.enter()
- 			.append("path")
+			 .enter()
+			 .append("g")			 
+			 .append("path")
+			 
  			.on("mouseover", function(d){
 				var path = d3.select("#"+d.id);
-				d3.select("#show").html(d.properties.name+"<br>Covid-19 cases: "+d.properties.cases);
-				path.style("stroke-width",4);	
-				path.transition()
-				.duration(200)
-				.style("transform", "scale(1.1)")
-					
+				d3.select("#show").html(d.properties.name)
+				.style("border", "1px solid black")	
+				path.attr("fill", "#0c6091")										
+			})				
+			.on("mouseleave",function(d,i){
+				d3.select("#show").html("")		
+				.style("border", "0px solid black")	
+				var path = d3.select("#"+d.id);		
+				path.attr("fill", "#42b3f5") 	
 			})
-				
-			.on("mouseleave",function(d){
-				d3.select("#show").html("");
-				d3.select("#"+d.id).style("stroke-width",0);
-			})
- 			.attr("class", "county")
+			.attr("class", "county")					 
  			.attr("id", function(d) { return d.id; })
  			.attr("d", path)
- 			.attr("fill", function(d, i) { return color(i); }) 			
-			.style("stroke-width", 0)
+ 			.attr("fill", "#42b3f5") 			
+			.style("stroke-width", 1)
 			.style("stroke", "black")
  			.style("stroke-opacity", 1);	
 		});
@@ -77,11 +74,22 @@
         document.onmousemove = function(e) { 
             var x = e.clientX; 
             var y = e.clientY; 
-            document.getElementById('show').style.marginLeft = (x-370)+"px";
-            document.getElementById('show').style.marginTop = (y-45)+"px";				
+            document.getElementById('show').style.marginLeft = (x+50)+"px";
+            document.getElementById('show').style.marginTop = (y-25)+"px";				
         }
 	</script>
-	
 
 </body>
 </html>
+
+<style>
+.county:hover{
+	cursor: pointer
+}
+#show{	
+	background-color: white;	
+	padding: 5px;
+	border-radius: 5px;
+}
+
+</style>
