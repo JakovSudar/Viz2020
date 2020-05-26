@@ -9,7 +9,8 @@
    <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.4.1/jquery.min.js"></script>   
 	<script src="https://cdnjs.cloudflare.com/ajax/libs/popper.js/1.14.7/umd/popper.min.js" integrity="sha384-UO2eT0CpHqdSJQ6hJty5KVphtPhzWj9WO1clHTMGa3JDZwrnQq4sF86dIHNDz0W1" crossorigin="anonymous"></script>
 	<script src="https://stackpath.bootstrapcdn.com/bootstrap/4.3.1/js/bootstrap.min.js" integrity="sha384-JjSmVgyd0p3pXB1rRibZUAYoIIy6OrQ6VrjIEaFf/nJGzIxFDsf4x0xIM+B07jRM" crossorigin="anonymous"></script>
-    <title>Vizualizacija podataka</title>
+	<script src="./app.js"></script>
+	<title>Vizualizacija podataka</title>
 </head>
 <body>	
 	<div class="row">	
@@ -17,9 +18,9 @@
 			<div id="main" style="z-index: 0; position:absolute"></div>		
 			<div  id="show" style="z-index: 5; position:absolute"></div>
 		</div>	
-		<div class="col-6" >
-			<div id="graph" class="mt-4">
-				
+		<div class="col-5" >			
+				<h3 class="text-center mt-4">Županija</h3>
+				<div id="graph" class="text-center" >								
 			</div>
 		</div>
 	</div>
@@ -57,23 +58,25 @@
 			 
  			.on("mouseover", function(d){
 				var path = d3.select("#"+d.id);
-				d3.select("#show").html(d.properties.name)
-				.style("border", "1px solid black")	
-				path.attr("fill", "#0c6091")										
+				d3.select("#show").html(d.properties.name)				
+				.style("display", "inline-block")
+				path.attr("fill", "#0c6091")
+												
 			})				
 			.on("mouseleave",function(d,i){
-				d3.select("#show").html("")		
-				.style("border", "0px solid black")	
+				d3.select("#show")				
+				.style("display", "none")
 				var path = d3.select("#"+d.id);
 				if(d.id !== clicked)		
 					path.attr("fill", "#42b3f5") 	
 			})
 			.on("click",function(d){
 				var path = d3.select("#"+d.id);
-				var data = d.properties;							
-				drawGraph(data)
+				var data = d.properties;
+				removeGraph();
+				setTimeout(() => { drawGraph(data)  }, 300);								
+				
 			})
-
 			.attr("class", "county")					 
  			.attr("id", function(d) { return d.id; })
  			.attr("d", path)
@@ -91,29 +94,59 @@
 		}
 		
 		function drawGraph(data){
-			var width = 900;
-			var height = 500;
+			var width = 759;
+			var height = 400;
 			
 			var res = getDataFromObject(data.BDP)	
 			var values = res[1][0]
-			var years = res[0][0]
-
-			
+			var years = res[0][0]			
 
 			var svg = d3.select("#graph")
 				.append("svg")
+				.attr("class", "svgGraph")
 				.attr("width", width)
 				.attr("height", height);
 
 			var barchart = svg.selectAll("rect")
 				.data(values)
 				.enter()
-				.append("rect")
-				.attr("x", function(d, i) { return 50 * i; })
-				.attr("y", function(d,i) { return height - d*0.1 ; })
-				.attr("width", 40)
-				.attr("height", function(d,i) { return d*0.1; })
-				.attr("fill", "#87e09f");
+				.append("rect")				
+				.attr("class", "bar")
+				.attr("x", function(d, i) { return 33 * i; })				
+				.attr("y", height)
+				.attr("width", 25)
+				.attr("height",0)
+				.attr("fill", "#87e09f")
+				.on("mouseover", function(d,i){																
+					d3.select("#show").text(d)
+					.style("border", "1px solid black")		
+					.style("display", "inline-block")													
+				})
+				.on("mouseleave",function(d,i){
+					d3.select("#show")				
+					.style("display", "none")						
+				})
+
+				svg.selectAll("rect")
+					.transition()
+					.duration(200)
+					.attr("y", function(d,i) { return height - d*0.055656 ; })
+					.attr("height", function(d,i) { return d*0.08; })
+					.delay(0)
+
+				setTimeout(() => { $("h3").html(data.name)  }, 400);
+				
+				
+		}
+		function removeGraph(){
+			var svg = d3.select("#graph")
+			var barchart = svg.selectAll("rect")
+			var numBars = (barchart[0].length)
+			for(var i=0;i<numBars;i++){
+				barchart[0][i].setAttribute("y","700px")	
+			}
+			setTimeout(() => { $("#graph").children().remove()  }, 300);
+					
 		}
 
 		function getDataFromObject(bdpObject){
@@ -137,13 +170,33 @@
 .county:hover{
 	cursor: pointer
 }
+.bar:hover{
+	fill: #64b579;
+	cursor: pointer;
+}
+
 #graph{
 	padding: 10px;
+	margin-right: auto;
+	margin-left: auto;  
+	border: 1px solid black;
+	border-radius: 10px;
 }
 #show{	
+	display: none;
 	background-color: white;	
 	padding: 5px;
+	border: 1px solid black;
 	border-radius: 5px;
+}
+
+rect{
+	transition: y 0.3s ease-in 0s ;
+}
+
+h3 {     
+    margin-right: auto;
+    margin-left: auto;       
 }
 
 
