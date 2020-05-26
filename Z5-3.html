@@ -20,16 +20,17 @@
 		</div>	
 		<div class="col-5" >			
 				<h3 class="text-center mt-4">Županija</h3>
-				<div id="graph" class="text-center" >								
-			</div>
+				<div id="graph" class="text-center"></div>
+				<div id="detailGraph"></div>
+			
 		</div>
-	</div>
-	
+	</div>	
     
     <script> 	
 		var clicked;	
 		var width = 960;
 		var height = 700;
+		var avg = new Uint32Array(23)
 		var projection = d3.geo.mercator()
  			.center([0, 10])
  			.scale(6000)
@@ -49,7 +50,7 @@
 
  		d3.json("cro_regv3.json", function(error, cro) {
  			var data = topojson.feature(cro, cro.objects.layer1);
-
+			calculateAvgs(data.features)
  			var states = svg.selectAll("path.county")
  			.data(data.features)
 			 .enter()
@@ -92,14 +93,27 @@
             document.getElementById('show').style.marginLeft = (x+50)+"px";
             document.getElementById('show').style.marginTop = (y-25)+"px";				
 		}
-		
+		function calculateAvgs(data){			
+			data.forEach(zu=>{
+				var bdp = (zu.properties.BDP)
+				var res = getDataFromObject(bdp)
+				var values = res[1][0]			
+				for(var i=0;i<23;i++){										
+					avg[i] += values[i]/21
+				}
+				console.log(avg)
+				
+			})
+			
+		}
 		function drawGraph(data){
 			var width = 759;
 			var height = 400;
 			
 			var res = getDataFromObject(data.BDP)	
 			var values = res[1][0]
-			var years = res[0][0]			
+			var years = res[0][0]	
+					
 
 			var svg = d3.select("#graph")
 				.append("svg")
@@ -176,6 +190,7 @@
 }
 
 #graph{
+	height: 422px;
 	padding: 10px;
 	margin-right: auto;
 	margin-left: auto;  
