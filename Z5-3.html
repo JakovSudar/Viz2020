@@ -1,0 +1,87 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <script src="http://d3js.org/d3.v3.min.js"></script>
+	<script src="http://d3js.org/topojson.v1.min.js"></script>	
+	<link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.3.1/css/bootstrap.min.css" integrity="sha384-ggOyR0iXCbMQv3Xipma34MD+dH/1fQ784/j6cY/iJTQUOhcWr7x9JvoRxT2MZw1T" crossorigin="anonymous">
+   <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.4.1/jquery.min.js"></script>   
+	<script src="https://cdnjs.cloudflare.com/ajax/libs/popper.js/1.14.7/umd/popper.min.js" integrity="sha384-UO2eT0CpHqdSJQ6hJty5KVphtPhzWj9WO1clHTMGa3JDZwrnQq4sF86dIHNDz0W1" crossorigin="anonymous"></script>
+	<script src="https://stackpath.bootstrapcdn.com/bootstrap/4.3.1/js/bootstrap.min.js" integrity="sha384-JjSmVgyd0p3pXB1rRibZUAYoIIy6OrQ6VrjIEaFf/nJGzIxFDsf4x0xIM+B07jRM" crossorigin="anonymous"></script>
+    <title>Zadatak 3.</title>
+</head>
+<style>
+	#show{
+		background-color: aqua;
+		font-size:xx-large;
+	}
+</style>
+<body>	
+	<div id="main" class="container">
+
+		<div id="show" style="z-index: 5; position:absolute"></div>
+	</div>
+    
+    <script>     
+		var color = d3.scale.category20();
+		var width = 960;
+		var height = 700;
+		var projection = d3.geo.mercator()
+ 			.center([0, 10])
+ 			.scale(6000)
+			.translate([17600, 4500])
+ 			.rotate([-180, 0]);
+		var path = d3.geo.path()
+ 			.projection(projection);
+		//kontenjer svg
+		var svg = d3.select("#main").append("svg")			
+ 			.attr("width", width)
+ 			.attr("height", height)
+ 			.style("background", "white")
+ 			.call(d3.behavior.zoom().on("zoom", function () {
+   				 svg.attr("transform", "translate(" + d3.event.translate + ")" + " scale(" + d3.event.scale + ")")
+ 			}))
+  			.append("g");	
+
+ 		d3.json("cro_regv3.json", function(error, cro) {
+ 			var data = topojson.feature(cro, cro.objects.layer1);
+
+ 			var states = svg.selectAll("path.county")
+ 			.data(data.features)
+ 			.enter()
+ 			.append("path")
+ 			.on("mouseover", function(d){
+				var path = d3.select("#"+d.id);
+				d3.select("#show").html(d.properties.name+"<br>Covid-19 cases: "+d.properties.cases);
+				path.style("stroke-width",4);	
+				path.transition()
+				.duration(200)
+				.style("transform", "scale(1.1)")
+					
+			})
+				
+			.on("mouseleave",function(d){
+				d3.select("#show").html("");
+				d3.select("#"+d.id).style("stroke-width",0);
+			})
+ 			.attr("class", "county")
+ 			.attr("id", function(d) { return d.id; })
+ 			.attr("d", path)
+ 			.attr("fill", function(d, i) { return color(i); }) 			
+			.style("stroke-width", 0)
+			.style("stroke", "black")
+ 			.style("stroke-opacity", 1);	
+		});
+    
+        document.onmousemove = function(e) { 
+            var x = e.clientX; 
+            var y = e.clientY; 
+            document.getElementById('show').style.marginLeft = (x-370)+"px";
+            document.getElementById('show').style.marginTop = (y-45)+"px";				
+        }
+	</script>
+	
+
+</body>
+</html>
