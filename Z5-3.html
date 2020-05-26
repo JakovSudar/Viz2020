@@ -21,7 +21,7 @@
 		<div class="col-5" >			
 				<h3 class="text-center mt-4">Županija</h3>
 				<div id="graph" class="text-center"></div>
-				<div id="detailGraph"></div>			
+							
 		</div>
 	</div>
 	<div class="modal fade  bd-example-modal-lg" id="exampleModalCenter" tabindex="-1" role="dialog" aria-labelledby="exampleModalCenterTitle" aria-hidden="true">
@@ -46,7 +46,8 @@
 		var clicked;	
 		var width = 960;
 		var height = 700;
-		var avg = new Uint32Array(23)
+		var allData = [];
+		var avg = new Uint32Array(23);
 		var projection = d3.geo.mercator()
  			.center([0, 10])
  			.scale(6000)
@@ -65,7 +66,8 @@
   			.append("g");	
 
  		d3.json("cro_regv3.json", function(error, cro) {
- 			var data = topojson.feature(cro, cro.objects.layer1);
+			 var data = topojson.feature(cro, cro.objects.layer1);
+			 allData= data.features;			 
 			calculateAvgs(data.features)
  			var states = svg.selectAll("path.county")
  			.data(data.features)
@@ -109,6 +111,39 @@
             document.getElementById('show').style.marginLeft = (x+50)+"px";
             document.getElementById('show').style.marginTop = (y-25)+"px";				
 		}
+
+		function drawDetailGraph(year){
+			var height = 400;
+			var width = 750;
+		
+			var svg = d3.select("#detailGraph")
+				.append("svg")			
+				.attr("width", width)
+				.attr("height", height)
+				.attr("class", "svgGraph")
+				.style("background", "white")
+			console.log(allData)
+
+			var barchart = svg.selectAll("rect")			
+				.data(allData)
+				.enter()
+				.append("rect")	
+				.attr("x", function(d, i) { return 33 * i; })				
+				
+				.attr("width", 25)
+				.attr("y", function(d,i) {
+					var value= (d.properties.BDP[year+1996+"."]).replace(",","");
+					return height - value*0.055656; 
+				 })
+				.attr("height", function(d,i) { 
+					var value= (d.properties.BDP[year+1996+"."]).replace(",","");
+					return value*0.08; 
+				})
+				
+				.attr("fill", "#87e09f")				
+
+		}
+
 		function calculateAvgs(data){			
 			data.forEach(zu=>{
 				var bdp = (zu.properties.BDP)
@@ -119,6 +154,7 @@
 				}								
 			})						
 		}
+
 		function drawGraph(data){
 			var width = 759;
 			var height = 400;
@@ -187,10 +223,7 @@
 				
 				
 		}
-		function drawDetailGraph(year){
-			var svg = d3.select("#detailGraph").append("svg")	
-			console.log(year)		
-		}
+		
 		function removeGraph(){
 			var svg = d3.select("#graph")
 			var barchart = svg.selectAll("rect")
@@ -213,7 +246,7 @@
 			}); 			
 			bdpNumbers = [].concat.apply([],bdpNumbers)
 			return [[years],[bdpNumbers]];
-		}
+		}		
 	</script>
 
 </body>
