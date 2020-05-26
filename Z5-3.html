@@ -100,11 +100,8 @@
 				var values = res[1][0]			
 				for(var i=0;i<23;i++){										
 					avg[i] += values[i]/21
-				}
-				console.log(avg)
-				
-			})
-			
+				}								
+			})						
 		}
 		function drawGraph(data){
 			var width = 759;
@@ -145,9 +142,26 @@
 					.transition()
 					.duration(200)
 					.attr("y", function(d,i) { return height - d*0.055656 ; })
-					.attr("height", function(d,i) { return d*0.08; })
+					.attr("height", function(d,i) { return d*0.08; })									
 					.delay(0)
 
+				svg.selectAll("p")
+					.data(avg)
+					.enter()
+					.append("rect")
+					.attr("class", "avg")
+					.attr("x", function(d, i) { return 33 * i; })			
+					.attr("width", 25)
+					.attr("y", function(d,i) { return height ; })
+					.attr("height", 1)					
+					.attr("fill", "none")					
+				
+				svg.selectAll(".avg")
+					.transition()
+					.duration(300)
+					.attr("y", function(d,i) { return height - d*0.055656 ; })
+					.attr("fill", "black")	
+					.delay(500)
 				setTimeout(() => { $("h3").html(data.name)  }, 400);
 				
 				
@@ -159,7 +173,7 @@
 			for(var i=0;i<numBars;i++){
 				barchart[0][i].setAttribute("y","700px")	
 			}
-			setTimeout(() => { $("#graph").children().remove()  }, 300);
+			setTimeout(() => { $("#graph").children().remove()}, 300);
 					
 		}
 
@@ -206,7 +220,10 @@
 }
 
 rect{
-	transition: y 0.3s ease-in 0s ;
+	transition: y 0.3s ease-in 0s ;	
+}
+.avg{
+	transition: fill 0.2s ease-in 0.3s;
 }
 
 h3 {     
