@@ -21,10 +21,26 @@
 		<div class="col-5" >			
 				<h3 class="text-center mt-4">Županija</h3>
 				<div id="graph" class="text-center"></div>
-				<div id="detailGraph"></div>
-			
+				<div id="detailGraph"></div>			
 		</div>
-	</div>	
+	</div>
+	<div class="modal fade  bd-example-modal-lg" id="exampleModalCenter" tabindex="-1" role="dialog" aria-labelledby="exampleModalCenterTitle" aria-hidden="true">
+		<div class="modal-dialog modal-dialog-centered modal-lg" role="document">
+		  <div class="modal-content">
+			<div class="modal-header">
+			  <h5 class="modal-title" id="exampleModalLongTitle">Modal title</h5>
+			  <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+				<span aria-hidden="true">&times;</span>
+			  </button>
+			</div>
+			<div class="modal-body">
+			  <div id="detailGraph"></div>
+			</div>
+			<div class="modal-footer">			  
+			</div>
+		  </div>
+		</div>
+	  </div>	
     
     <script> 	
 		var clicked;	
@@ -123,19 +139,24 @@
 				.enter()
 				.append("rect")				
 				.attr("class", "bar")
+				.attr("data-toggle", "modal")
+				.attr("data-target","#exampleModalCenter")
 				.attr("x", function(d, i) { return 33 * i; })				
 				.attr("y", height)
 				.attr("width", 25)
 				.attr("height",0)
 				.attr("fill", "#87e09f")
 				.on("mouseover", function(d,i){																
-					d3.select("#show").text(d)
+					d3.select("#show").html("BDP:"+d+"<br>Avg:"+avg[i])
 					.style("border", "1px solid black")		
 					.style("display", "inline-block")													
 				})
 				.on("mouseleave",function(d,i){
 					d3.select("#show")				
 					.style("display", "none")						
+				})
+				.on("click",function(d,i){
+					drawDetailGraph(i)						
 				})
 
 				svg.selectAll("rect")
@@ -165,6 +186,10 @@
 				setTimeout(() => { $("h3").html(data.name)  }, 400);
 				
 				
+		}
+		function drawDetailGraph(year){
+			var svg = d3.select("#detailGraph").append("svg")	
+			console.log(year)		
 		}
 		function removeGraph(){
 			var svg = d3.select("#graph")
