@@ -25,8 +25,8 @@
 	</div>
 	
     
-    <script>  
-		
+    <script> 	
+		var clicked;	
 		var width = 960;
 		var height = 700;
 		var projection = d3.geo.mercator()
@@ -64,9 +64,16 @@
 			.on("mouseleave",function(d,i){
 				d3.select("#show").html("")		
 				.style("border", "0px solid black")	
-				var path = d3.select("#"+d.id);		
-				path.attr("fill", "#42b3f5") 	
+				var path = d3.select("#"+d.id);
+				if(d.id !== clicked)		
+					path.attr("fill", "#42b3f5") 	
 			})
+			.on("click",function(d){
+				var path = d3.select("#"+d.id);
+				var data = d.properties;							
+				drawGraph(data)
+			})
+
 			.attr("class", "county")					 
  			.attr("id", function(d) { return d.id; })
  			.attr("d", path)
@@ -81,7 +88,46 @@
             var y = e.clientY; 
             document.getElementById('show').style.marginLeft = (x+50)+"px";
             document.getElementById('show').style.marginTop = (y-25)+"px";				
-        }
+		}
+		
+		function drawGraph(data){
+			var width = 900;
+			var height = 500;
+			
+			var res = getDataFromObject(data.BDP)	
+			var values = res[1][0]
+			var years = res[0][0]
+
+			
+
+			var svg = d3.select("#graph")
+				.append("svg")
+				.attr("width", width)
+				.attr("height", height);
+
+			var barchart = svg.selectAll("rect")
+				.data(values)
+				.enter()
+				.append("rect")
+				.attr("x", function(d, i) { return 50 * i; })
+				.attr("y", function(d,i) { return height - d*0.1 ; })
+				.attr("width", 40)
+				.attr("height", function(d,i) { return d*0.1; })
+				.attr("fill", "#87e09f");
+		}
+
+		function getDataFromObject(bdpObject){
+			var bdpNumbers =[]
+			var years= []
+			Object.keys(bdpObject).map(function (key) {  
+				years.push(Number(key.replace('.','')));   
+				var numStr = (bdpObject[key]).replace(',','')
+				 bdpNumbers.push([Number(numStr)]); 
+				 
+			}); 			
+			bdpNumbers = [].concat.apply([],bdpNumbers)
+			return [[years],[bdpNumbers]];
+		}
 	</script>
 
 </body>
