@@ -3,8 +3,8 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <script src="http://d3js.org/d3.v3.min.js"></script>
-	<script src="http://d3js.org/topojson.v1.min.js"></script>	
+    <script src="https://d3js.org/d3.v3.min.js"></script>
+	<script src="https://d3js.org/topojson.v1.min.js"></script>	
 	<link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.3.1/css/bootstrap.min.css" integrity="sha384-ggOyR0iXCbMQv3Xipma34MD+dH/1fQ784/j6cY/iJTQUOhcWr7x9JvoRxT2MZw1T" crossorigin="anonymous">
    <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.4.1/jquery.min.js"></script>   
 	<script src="https://cdnjs.cloudflare.com/ajax/libs/popper.js/1.14.7/umd/popper.min.js" integrity="sha384-UO2eT0CpHqdSJQ6hJty5KVphtPhzWj9WO1clHTMGa3JDZwrnQq4sF86dIHNDz0W1" crossorigin="anonymous"></script>
@@ -19,7 +19,7 @@
 			<div  id="show" style="z-index: 5; position:absolute"></div>
 		</div>	
 		<div class="col-5" >			
-				<h3 class="text-center mt-4">Županija</h3>
+				<h3 class="text-center mt-4">Odaberite županiju</h3>
 				<div id="graph" class="text-center"></div>
 							
 		</div>
@@ -35,17 +35,15 @@
 			</div>
 			<div class="modal-body">
 			  <div id="detailGraph"></div>
-			</div>
-			<div class="modal-footer">			  
-			</div>
+			</div>			
 		  </div>
 		</div>
 	  </div>	
     
-    <script> 	
-		var clicked;	
+    <script> 		
 		var width = 960;
 		var height = 700;
+		var clicked;
 		var allData = [];
 		var avg = new Uint32Array(23);
 		var projection = d3.geo.mercator()
@@ -91,7 +89,7 @@
 			})
 			.on("click",function(d){
 				var path = d3.select("#"+d.id);
-				var data = d.properties;
+				var data = d.properties;				
 				removeGraph();
 				setTimeout(() => { drawGraph(data)  }, 300);								
 				
@@ -112,7 +110,8 @@
             document.getElementById('show').style.marginTop = (y-25)+"px";				
 		}
 
-		function drawDetailGraph(year){
+		function drawDetailGraph(year, chosen){
+
 			var height = 600;
 			var width = 750;
 			var mb= 180;
@@ -146,14 +145,12 @@
 				
 			d3.select("#modalTitle").text("BDP za "+ (1996+year)+". godinu")
 
-			
-
 			svg.append("g")
 				.attr("class", "x axis")
 				.attr("transform", "translate(0," + (height-mb) + ")")
 				.call(xAxis)
 				.selectAll("text")
-				.attr("transform", "translate(-15,3) rotate(-70) ")
+				.attr("transform", "translate(-15,3) rotate(-70)")
 				.style("text-anchor", "end");
 
 			svg.append("g")
@@ -161,13 +158,13 @@
 				.attr("transform", "translate("+ml+","+ (0-mb) +")")
 				.call(yAxis)
 				.append("text")
-				.attr("transform", "rotate(-90)")							
-				
+				.attr("transform", "rotate(-90)")											
 
 			var barchart = svg.selectAll("rect")			
 				.data(allData)
 				.enter()
 				.append("rect")	
+				.attr("class", "bar")
 				.attr("x", function(d, i) { return x(i); })				
 				
 				.attr("width", 25)
@@ -177,12 +174,28 @@
 				})
 				.attr("height", function(d,i) {
 					var value= (d.properties.BDP[year+1996+"."]).replace(",","");
-					return height -y(value); 
-					
-					
+					return height -y(value); 				
 				 })				
 				
-				.attr("fill", "#87e09f")				
+				.attr("fill", function(d,i){
+					if(d.properties.name==clicked) return  "#7eabf2";
+					else return "#87e09f";
+				})
+				
+				var avgline = d3.svg.line()
+					.x(function(d, i) {
+						if(i==20){
+							return x(i)+x(1);
+						}
+						 return x(i); 
+						})
+					.y(function(d) { return height - (height-y(d)) -mb; });
+				var avgs = Array(23).fill(avg[year]); 
+				console.log(avgs)
+				var linechart = svg.append("path")				
+					.attr("class", "line")
+					.attr("d", avgline(avgs))
+					.style("stroke", "black");
 
 		}
 
@@ -198,9 +211,11 @@
 		}
 
 		function drawGraph(data){
+			clicked = (data.name)
 			var width = 759;
 			var height = 400;
-			
+			var mb= 45;
+			var ml = 50;
 			var res = getDataFromObject(data.BDP)	
 			var values = res[1][0]
 			var years = res[0][0]	
@@ -212,6 +227,41 @@
 				.attr("width", width)
 				.attr("height", height);
 
+			var x = d3.scale.ordinal()
+				.domain(d3.range(23))
+				.rangeRoundBands([ml, width]);
+			var y = d3.scale.linear()
+				.domain([0, 7187])
+				.range([height, mb+20]);
+
+			var xAxis = d3.svg.axis()
+				.scale(x)
+				.orient("bottom")
+				.tickFormat(function(d, i) { 
+					return 1996+i; 
+				})
+				
+			var yAxis = d3.svg.axis()
+				.scale(y)
+				.orient("left")
+				.ticks(10);
+				
+
+			svg.append("g")
+				.attr("class", "x axis")
+				.attr("transform", "translate(0," + (height-mb) + ")")
+				.call(xAxis)
+				.selectAll("text")
+				.attr("transform", "translate(-15,3) rotate(-70)")
+				.style("text-anchor", "end");
+
+			svg.append("g")
+				.attr("class", "y axis")
+				.attr("transform", "translate("+ml+","+ (0-mb) +")")
+				.call(yAxis)
+				.append("text")
+				.attr("transform", "rotate(-90)")	
+
 			var barchart = svg.selectAll("rect")
 				.data(values)
 				.enter()
@@ -219,7 +269,7 @@
 				.attr("class", "bar")
 				.attr("data-toggle", "modal")
 				.attr("data-target","#exampleModalCenter")
-				.attr("x", function(d, i) { return 33 * i; })				
+				.attr("x", function(d, i) { return x(i); })				
 				.attr("y", height)
 				.attr("width", 25)
 				.attr("height",0)
@@ -236,29 +286,30 @@
 				.on("click",function(d,i){
 					drawDetailGraph(i)						
 				})
-
+				//stvarna visina stupca - za animaciju
 				svg.selectAll("rect")
 					.transition()
 					.duration(200)
-					.attr("y", function(d,i) { return height - d*0.055656 ; })
-					.attr("height", function(d,i) { return d*0.08; })									
+					.attr("y", function(d,i) { return height - (height-y(d))-mb ; })
+					.attr("height", function(d,i) { return height -y(d) })									
 					.delay(0)
 
+				//za prosijek
 				svg.selectAll("p")
 					.data(avg)
 					.enter()
 					.append("rect")
 					.attr("class", "avg")
-					.attr("x", function(d, i) { return 33 * i; })			
+					.attr("x", function(d, i) { return x(i); })			
 					.attr("width", 25)
-					.attr("y", function(d,i) { return height ; })
+					.attr("y", function(d,i) { return height-mb ; })
 					.attr("height", 1)					
 					.attr("fill", "none")					
-				
+				//stvarna vrijednost prosjeka
 				svg.selectAll(".avg")
 					.transition()
 					.duration(300)
-					.attr("y", function(d,i) { return height - d*0.055656 ; })
+					.attr("y", function(d,i) { return height -(height-y(d))-mb ; })
 					.attr("fill", "black")	
 					.delay(500)
 				setTimeout(() => { $("h3").html(data.name)  }, 400);
@@ -271,7 +322,7 @@
 			var barchart = svg.selectAll("rect")
 			var numBars = (barchart[0].length)
 			for(var i=0;i<numBars;i++){
-				barchart[0][i].setAttribute("y","700px")	
+				barchart[0][i].setAttribute("y","500px")	
 			}
 			setTimeout(() => { $("#graph").children().remove()}, 300);
 					
