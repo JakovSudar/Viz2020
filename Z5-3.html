@@ -28,7 +28,7 @@
 		<div class="modal-dialog modal-dialog-centered modal-lg" role="document">
 		  <div class="modal-content">
 			<div class="modal-header">
-			  <h5 class="modal-title" id="exampleModalLongTitle">Modal title</h5>
+			  <h5 class="modal-title" id="modalTitle"></h5>
 			  <button type="button" class="close" data-dismiss="modal" aria-label="Close">
 				<span aria-hidden="true">&times;</span>
 			  </button>
@@ -67,7 +67,7 @@
 
  		d3.json("cro_regv3.json", function(error, cro) {
 			 var data = topojson.feature(cro, cro.objects.layer1);
-			 allData= data.features;			 
+			 allData= data.features;					 	 
 			calculateAvgs(data.features)
  			var states = svg.selectAll("path.county")
  			.data(data.features)
@@ -113,32 +113,74 @@
 		}
 
 		function drawDetailGraph(year){
-			var height = 400;
+			var height = 600;
 			var width = 750;
-		
+			var mb= 180;
+			var ml = 50;
+			$("#detailGraph").children().remove();
 			var svg = d3.select("#detailGraph")
 				.append("svg")			
 				.attr("width", width)
 				.attr("height", height)
 				.attr("class", "svgGraph")
 				.style("background", "white")
-			console.log(allData)
+
+			var x = d3.scale.ordinal()
+				.domain(d3.range(21))
+				.rangeRoundBands([ml, width]);
+			var y = d3.scale.linear()
+				.domain([0, 7187])
+				.range([height, mb+20]);
+
+			var xAxis = d3.svg.axis()
+				.scale(x)
+				.orient("bottom")
+				.tickFormat(function(d, i) { 
+					return(allData[d].properties.name); 
+				})
+				
+			var yAxis = d3.svg.axis()
+				.scale(y)
+				.orient("left")
+				.ticks(10);
+				
+			d3.select("#modalTitle").text("BDP za "+ (1996+year)+". godinu")
+
+			
+
+			svg.append("g")
+				.attr("class", "x axis")
+				.attr("transform", "translate(0," + (height-mb) + ")")
+				.call(xAxis)
+				.selectAll("text")
+				.attr("transform", "translate(-15,3) rotate(-70) ")
+				.style("text-anchor", "end");
+
+			svg.append("g")
+				.attr("class", "y axis")
+				.attr("transform", "translate("+ml+","+ (0-mb) +")")
+				.call(yAxis)
+				.append("text")
+				.attr("transform", "rotate(-90)")							
+				
 
 			var barchart = svg.selectAll("rect")			
 				.data(allData)
 				.enter()
 				.append("rect")	
-				.attr("x", function(d, i) { return 33 * i; })				
+				.attr("x", function(d, i) { return x(i); })				
 				
 				.attr("width", 25)
-				.attr("y", function(d,i) {
+				.attr("y",function(d,i){
 					var value= (d.properties.BDP[year+1996+"."]).replace(",","");
-					return height - value*0.055656; 
-				 })
-				.attr("height", function(d,i) { 
-					var value= (d.properties.BDP[year+1996+"."]).replace(",","");
-					return value*0.08; 
+					return height - (height-y(value))-mb
 				})
+				.attr("height", function(d,i) {
+					var value= (d.properties.BDP[year+1996+"."]).replace(",","");
+					return height -y(value); 
+					
+					
+				 })				
 				
 				.attr("fill", "#87e09f")				
 
