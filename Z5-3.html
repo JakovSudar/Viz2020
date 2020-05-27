@@ -21,7 +21,9 @@
 		<div class="col-5" >			
 				<h3 class="text-center mt-4">Odaberite županiju</h3>
 				<div id="graph" class="text-center"></div>
-							
+				<div id="info" class="info">U grafu su prikazani podaci o BDP-u po godinama za odabranu županiju.<br>
+					Crne crtice predstavljaju prosječan BDP u zemlji za tu godinu. Klikom na neki od stupaca dobiva se prikaz BDP-a u svim županijama za tu godinu.
+				</div>			
 		</div>
 	</div>
 	<div class="modal fade  bd-example-modal-lg" id="exampleModalCenter" tabindex="-1" role="dialog" aria-labelledby="exampleModalCenterTitle" aria-hidden="true">
@@ -40,7 +42,12 @@
 		</div>
 	  </div>	
     
-    <script> 		
+    <script> 	
+		
+		$('#exampleModalCenter').on('hidden.bs.modal', function (e) {
+			$("#detailGraph").children().remove();			
+		  })	
+		var pie = false;
 		var width = 960;
 		var height = 700;
 		var clicked;
@@ -87,11 +94,12 @@
 				if(d.id !== clicked)		
 					path.attr("fill", "#42b3f5") 	
 			})
-			.on("click",function(d){
+			.on("click",function(d){				
 				var path = d3.select("#"+d.id);
 				var data = d.properties;				
 				removeGraph();
-				setTimeout(() => { drawGraph(data)  }, 300);								
+				
+				setTimeout(() => { drawGraph(data);  }, 300);								
 				
 			})
 			.attr("class", "county")					 
@@ -111,18 +119,133 @@
 		}
 
 		function drawDetailGraph(year, chosen){
-
 			var height = 600;
 			var width = 750;
-			var mb= 180;
-			var ml = 50;
-			$("#detailGraph").children().remove();
 			var svg = d3.select("#detailGraph")
 				.append("svg")			
+				.attr("id","detailSvg")
 				.attr("width", width)
 				.attr("height", height)
 				.attr("class", "svgGraph")
 				.style("background", "white")
+
+			d3.select("#modalTitle").
+				text("BDP za "+ (1996+year)+". godinu")			
+				.append("button")
+				.attr("class", "btn btn-outline-info ml-4")
+				.attr("float", "right")
+				.text("Promijeni prikaz")
+				.on("click",function(){
+					pie = !pie;					
+					if(pie){
+						d3.select("#detailSvg")					
+							.transition()
+							.duration(300)
+							.attr("height", "0px")							
+							.delay(0)
+						setTimeout(() => { appendPie(year)  }, 300);
+						d3.select("#detailSvg")					
+							.transition()
+							.duration(300)
+							.attr("height", "600px")							
+							.delay(300)
+					}else{						
+						var svg = d3.select("#detailSvg")												
+							.transition()
+							.duration(300)
+							.attr("height", "0")							
+							.delay(0)
+						setTimeout(() => { appendBars(year)  }, 300);
+						d3.select("#detailSvg")					
+							.transition()
+							.duration(300)
+							.attr("height", "600px")							
+							.delay(300)
+					}						
+				})		
+				if(pie){
+					appendPie(year)
+				}else
+				appendBars(year)
+					
+
+		}
+
+		function appendPie(year){
+			$("#detailSvg").children().remove();
+			var outerRadius = 200;
+			var innerRadius = 100;
+			var pieData = [];
+			var width = 759;
+			var height = 600;
+			var zuData = {name: allData[0].properties.name, value:allData[0].properties.BDP["1996."] }
+			//priprema podataka za piechart
+			allData.forEach(zu => {
+				var bdp = zu.properties.BDP[1996+year+"."].replace(",","");
+				var name = zu.properties.name;
+				var zuData = {name: name, value:Number(bdp)  };
+				pieData.push(zuData);
+			})		
+
+			var color = d3.scale.category20();
+
+			var arc = d3.svg.arc()
+				.innerRadius(innerRadius)
+				.outerRadius(outerRadius);
+
+			var pie = d3.layout.pie()
+				.value(function(d) { return d.value; });
+
+			var pieArcs = d3.select("#detailSvg")
+				.selectAll("g.pie")
+				.data(pie(pieData))
+				.enter()
+				.append("g")
+				.attr("class", "pie")
+				.attr("transform", "translate(" + (width / 2) + ", " + (height / 2) + ")");				
+
+			pieArcs.append("path")
+				.attr("fill", function(d, i) { return color(i); })
+				.attr("d", arc)
+				.on("mouseover", function(d,i){																
+					d3.select("#show").html(function(){						
+						return d.data.name
+					})					
+					.style("border", "1px solid black")		
+					.style("display", "inline-block")													
+				})
+				.on("mouseleave",function(d,i){
+					d3.select("#show")				
+					.style("display", "none")						
+				})		
+
+			pieArcs.append("text")
+				.attr("transform", function(d) { return "translate(" + arc.centroid(d) + ")"; }) .attr("text-anchor", "middle")
+				.text(function(d) { return d.value; })
+				.on("mouseover", function(d,i){																
+					d3.select("#show").html(function(){						
+						return d.data.name
+					})
+					.style("border", "1px solid black")		
+					.style("display", "inline-block")													
+				})
+				.on("mouseleave",function(d,i){
+					d3.select("#show")				
+					.style("display", "none")						
+				})
+
+
+		}
+		
+		function appendBars(year){
+			var height = 600;
+			var width = 750;
+			var mb= 180;
+			var ml = 50;
+			$("#detailSvg").children().remove();
+
+			var svg = d3.select("#detailSvg")
+			
 
 			var x = d3.scale.ordinal()
 				.domain(d3.range(21))
@@ -143,78 +266,75 @@
 				.orient("left")
 				.ticks(10);
 				
-			d3.select("#modalTitle").text("BDP za "+ (1996+year)+". godinu")
 
 			svg.append("g")
-				.attr("class", "x axis")
-				.attr("transform", "translate(0," + (height-mb) + ")")
-				.call(xAxis)
-				.selectAll("text")
-				.attr("transform", "translate(-15,3) rotate(-70)")
-				.style("text-anchor", "end");
+			.attr("class", "x axis")
+			.attr("transform", "translate(0," + (height-mb) + ")")
+			.call(xAxis)
+			.selectAll("text")
+			.attr("transform", "translate(-15,3) rotate(-70)")
+			.style("text-anchor", "end");
 
 			svg.append("g")
-				.attr("class", "y axis")
-				.attr("transform", "translate("+ml+","+ (0-mb) +")")
-				.call(yAxis)
-				.append("text")
-				.attr("transform", "rotate(-90)")											
+			.attr("class", "y axis")
+			.attr("transform", "translate("+ml+","+ (0-mb) +")")
+			.call(yAxis)
+			.append("text")
+			.attr("transform", "rotate(-90)")											
 
-			var barchart = svg.selectAll("rect")			
-				.data(allData)
-				.enter()
-				.append("rect")	
-				.attr("class", "bar")
-				.attr("x", function(d, i) { return x(i); })				
-				
-				.attr("width", 25)
-				.attr("y",function(d,i){
+		var barchart = svg.selectAll("rect")			
+			.data(allData)
+			.enter()
+			.append("rect")	
+			.attr("class", "bar")
+			.attr("x", function(d, i) { return x(i); })				
+			
+			.attr("width", 25)
+			.attr("y",function(d,i){
+				var value= (d.properties.BDP[year+1996+"."]).replace(",","");
+				return height - (height-y(value))-mb
+			})
+			.attr("height", function(d,i) {
+				var value= (d.properties.BDP[year+1996+"."]).replace(",","");
+				return height -y(value); 				
+			 })				
+			
+			.attr("fill", function(d,i){
+				if(d.properties.name==clicked) return  "#7eabf2";
+				else return "#87e09f";
+			})
+			.on("mouseover", function(d,i){																
+				d3.select("#show").html(function(){
 					var value= (d.properties.BDP[year+1996+"."]).replace(",","");
-					return height - (height-y(value))-mb
+					return d.properties.name +"<br>BDP: "+ value
 				})
-				.attr("height", function(d,i) {
-					var value= (d.properties.BDP[year+1996+"."]).replace(",","");
-					return height -y(value); 				
-				 })				
-				
-				.attr("fill", function(d,i){
-					if(d.properties.name==clicked) return  "#7eabf2";
-					else return "#87e09f";
-				})
-				.on("mouseover", function(d,i){																
-					d3.select("#show").html(function(){
-						var value= (d.properties.BDP[year+1996+"."]).replace(",","");
-						return d.properties.name +"<br>BDP: "+ value
+				.style("border", "1px solid black")		
+				.style("display", "inline-block")													
+			})
+			.on("mouseleave",function(d,i){
+				d3.select("#show")				
+				.style("display", "none")						
+			})
+			
+			var avgline = d3.svg.line()
+				.x(function(d, i) {
+					if(i==20){
+						return x(i)+x(1);
+					}
+					 return x(i); 
 					})
-					.style("border", "1px solid black")		
-					.style("display", "inline-block")													
-				})
-				.on("mouseleave",function(d,i){
-					d3.select("#show")				
-					.style("display", "none")						
-				})
-				
-				var avgline = d3.svg.line()
-					.x(function(d, i) {
-						if(i==20){
-							return x(i)+x(1);
-						}
-						 return x(i); 
-						})
-					.y(function(d) { return height - (height-y(d)) -mb; });
-				var avgs = Array(21).fill(avg[year]); 
-				console.log(avgs)
-				var linechart = svg.append("path")				
-					.attr("class", "line")
-					.attr("d", avgline(avgs))
-					.style("stroke", "black")					
-				
-				var label = svg.append("text")
-						.attr("y", height -(height-y(avg[year])) -mb -3)
-						.attr("x", x(19)+18)
-						.text("Prosjek")
-					
-
+				.y(function(d) { return height - (height-y(d)) -mb; });
+			var avgs = Array(21).fill(avg[year]); 
+			console.log(avgs)
+			var linechart = svg.append("path")				
+				.attr("class", "line")
+				.attr("d", avgline(avgs))
+				.style("stroke", "black")					
+			
+			var label = svg.append("text")
+					.attr("y", height -(height-y(avg[year])) -mb -3)
+					.attr("x", x(19)+18)
+					.text("Prosjek")
 		}
 
 		function calculateAvgs(data){			
@@ -371,6 +491,12 @@
 	fill: #64b579;
 	cursor: pointer;
 }
+.info{
+	padding: 20px;
+	font-size: 1.1em;
+	
+	
+}
 
 #graph{
 	height: 422px;
@@ -399,7 +525,4 @@ h3 {
     margin-right: auto;
     margin-left: auto;       
 }
-
-
-
 </style>
