@@ -16,7 +16,7 @@
 	<div class="row">	
 		<div class="col-6">
 			<div id="main" style="z-index: 0; position:absolute"></div>		
-			<div  id="show" style="z-index: 5; position:absolute"></div>
+			<div  id="show" style="z-index: 2147483647; position:absolute"></div>
 		</div>	
 		<div class="col-5" >			
 				<h3 class="text-center mt-4">Odaberite županiju</h3>
@@ -181,6 +181,18 @@
 					if(d.properties.name==clicked) return  "#7eabf2";
 					else return "#87e09f";
 				})
+				.on("mouseover", function(d,i){																
+					d3.select("#show").html(function(){
+						var value= (d.properties.BDP[year+1996+"."]).replace(",","");
+						return d.properties.name +"<br>BDP: "+ value
+					})
+					.style("border", "1px solid black")		
+					.style("display", "inline-block")													
+				})
+				.on("mouseleave",function(d,i){
+					d3.select("#show")				
+					.style("display", "none")						
+				})
 				
 				var avgline = d3.svg.line()
 					.x(function(d, i) {
@@ -190,12 +202,18 @@
 						 return x(i); 
 						})
 					.y(function(d) { return height - (height-y(d)) -mb; });
-				var avgs = Array(23).fill(avg[year]); 
+				var avgs = Array(21).fill(avg[year]); 
 				console.log(avgs)
 				var linechart = svg.append("path")				
 					.attr("class", "line")
 					.attr("d", avgline(avgs))
-					.style("stroke", "black");
+					.style("stroke", "black")					
+				
+				var label = svg.append("text")
+						.attr("y", height -(height-y(avg[year])) -mb -3)
+						.attr("x", x(19)+18)
+						.text("Prosjek")
+					
 
 		}
 
