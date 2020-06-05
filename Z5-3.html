@@ -13,8 +13,39 @@
 	<title>Vizualizacija podataka</title>
 </head>
 <body>	
-	<div class="row">	
-		<div class="col-6">
+	<div class="row">			
+		<div class="col-6">			
+			<div class="picker">
+				<p class="note">Klikom na "primjeni" županije će se obojati u skladu sa vrijednošću BDP-a za odabranu godinu.</p>
+				Odaberite godinu
+				<select name="years" id="yearSelect">
+					<option value="1996">1996</option>
+					<option value="1997">1997</option>
+					<option value="1998">1998</option>
+					<option value="1999">1999</option>
+					<option value="2000">2000</option>
+					<option value="2001">2001</option>
+					<option value="2002">2002</option>
+					<option value="2003">2003</option>
+					<option value="2004">2004</option>
+					<option value="2005">2005</option>
+					<option value="2006">2006</option>
+					<option value="2007">2007</option>
+					<option value="2008">2008</option>
+					<option value="2009">2009</option>
+					<option value="2010">2010</option>
+					<option value="2011">2011</option>
+					<option value="2012">2012</option>
+					<option value="2013">2013</option>
+					<option value="2014">2014</option>
+					<option value="2015">2015</option>
+					<option value="2016">2016</option>
+					<option value="2017">2017</option>
+					<option value="2018">2018</option>					
+				</select>
+				<button id="gradientBtn" class="btn btn-info btn-sm ml-2">Primjeni</button>
+				<button id="deleteGradient" class="btn btn-danger btn-sm ">Poništi</button>
+			</div>
 			<div id="main" style="z-index: 0; position:absolute"></div>		
 			<div  id="show" style="z-index: 2147483647; position:absolute"></div>
 		</div>	
@@ -49,12 +80,15 @@
 		$('#exampleModalCenter').on('hidden.bs.modal', function (e) {
 			$("#detailGraph").children().remove();			
 		  })	
+
 		var pie = false;
 		var width = 960;
 		var height = 700;
 		var clicked;
+		var gradientOn = false;
 		var allData = [];
 		var avg = new Uint32Array(23);
+		var colors = ['rgb(255, 17, 0)']
 		var projection = d3.geo.mercator()
  			.center([0, 10])
  			.scale(6000)
@@ -63,6 +97,41 @@
 		var path = d3.geo.path()
  			.projection(projection);
 		//kontenjer svg
+
+		 $("#gradientBtn").click(function(){
+			gradientOn = true;
+			 var zu = d3.selectAll(".county")
+			 var max = 0;
+			 var min = 100000;			
+			 zu[0].forEach(zup => {
+				 console.log(zup)
+				bdp = zup.__data__.properties.BDP[yearSelect.value+"."]
+				bdp = Number(bdp.replace(",",""))				
+				if(bdp>max) max = bdp
+				if(bdp<min) min = bdp
+			 })
+			 console.log(max)
+			 console.log(min)
+			 
+			 zu[0].forEach(zup => {
+				bdp = zup.__data__.properties.BDP[yearSelect.value+"."]
+				bdp = Number(bdp.replace(",",""))				
+				var each = d3.select("#"+zup.id)
+				.attr("fill","#0000ff")
+				.style("opacity",function(){
+					var normalized = (bdp-min)/(max - min);
+					return normalized;
+				})
+			 }) 
+		 }) 
+		 $("#deleteGradient").click(function(){
+			 gradientOn = false;
+			 var zu = d3.selectAll(".county")
+			 .attr("fill","#42b3f5")
+			 .style("opacity","1")
+		 })
+
+
 		var svg = d3.select("#main").append("svg")			
  			.attr("width", width)
  			.attr("height", height)
@@ -80,39 +149,39 @@
  			.data(data.features)
 			 .enter()
 			 .append("g")			 
-			 .append("path")
-			 
+			 .append("path")			 
  			.on("mouseover", function(d){
 				var path = d3.select("#"+d.id);
 				d3.select("#show").html(d.properties.name)				
 				.style("display", "inline-block")
-				path.attr("fill", "#0c6091")
-												
+				if(!gradientOn)
+				path.attr("fill", "#0c6091")	
+								
 			})				
 			.on("mouseleave",function(d,i){
 				d3.select("#show")				
 				.style("display", "none")
-				var path = d3.select("#"+d.id);
-				if(d.id !== clicked)		
-					path.attr("fill", "#42b3f5") 	
+				var path = d3.select("#"+d.id);	
+				if(!gradientOn)
+				path.attr("fill", "#42b3f5") 			
 			})
 			.on("click",function(d){				
 				var path = d3.select("#"+d.id);
 				var data = d.properties;				
-				removeGraph();
-				
+				removeGraph();				
 				setTimeout(() => { drawGraph(data);  }, 300);								
 				
 			})
 			.attr("class", "county")					 
  			.attr("id", function(d) { return d.id; })
  			.attr("d", path)
- 			.attr("fill", "#42b3f5") 			
+ 			.attr("fill", '#42b3f5') 			
 			.style("stroke-width", 1)
 			.style("stroke", "black")
  			.style("stroke-opacity", 1);	
 		});
-    
+	
+		
         document.onmousemove = function(e) { 
             var x = e.clientX; 
             var y = e.clientY; 
@@ -220,7 +289,7 @@
 					d3.select("#show")				
 					.style("display", "none")						
 				})		
-
+			//brojcana vrijednost:
 			pieArcs.append("text")
 				.attr("transform", function(d) { return "translate(" + arc.centroid(d) + ")"; }) .attr("text-anchor", "middle")
 				.text(function(d) { return d.value; })
@@ -235,6 +304,19 @@
 					d3.select("#show")				
 					.style("display", "none")						
 				})
+			//natpis zupanije:
+			pieArcs.append("text")
+				.attr("transform", function(d) {
+					var c = arc.centroid(d),
+						x = c[0],
+						y = c[1],        
+						h = Math.sqrt(x*x + y*y);
+					return "translate(" + (x/h * outerRadius) +  ',' +
+					(y/h * outerRadius) +  ") rotate("+((d.startAngle+d.endAngle)/2*360/(2*Math.PI)-90) +")"; 
+				})
+				.attr("text-anchor", "start")
+				.text(function(d,i) { return pieData[i].name; });
+
 
 
 		}
@@ -358,8 +440,7 @@
 			var ml = 50;
 			var res = getDataFromObject(data.BDP)	
 			var values = res[1][0]
-			var years = res[0][0]	
-					
+			var years = res[0][0]						
 
 			var svg = d3.select("#graph")
 				.append("svg")
@@ -434,7 +515,7 @@
 					.attr("height", function(d,i) { return height -y(d) })									
 					.delay(0)
 
-				//za prosijek
+				//za prosjek
 				svg.selectAll("p")
 					.data(avg)
 					.enter()
@@ -487,6 +568,12 @@
 </html>
 
 <style>
+.picker{
+	margin-left: auto;
+	margin-right: auto;
+	width: 400px;
+	padding : 10px;
+}
 footer{
 	margin-top: 230px;
 	
@@ -497,6 +584,9 @@ footer{
 }
 .county:hover{
 	cursor: pointer
+}
+.note{
+	font-size: 0.73em;
 }
 .bar:hover{
 	fill: #64b579;
@@ -515,6 +605,9 @@ footer{
 	border: 1px solid black;
 	border-radius: 10px;
 }
+svg{
+	width:100%;
+}
 #show{	
 	display: none;
 	background-color: white;	
@@ -522,7 +615,9 @@ footer{
 	border: 1px solid black;
 	border-radius: 5px;
 }
-
+#main{
+	width: 100%;
+}
 rect{
 	transition: y 0.3s ease-in 0s ;	
 }
@@ -534,4 +629,5 @@ h3 {
     margin-right: auto;
     margin-left: auto;       
 }
+
 </style>
