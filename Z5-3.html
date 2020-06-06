@@ -16,34 +16,10 @@
 	<div class="row">			
 		<div class="col-6">			
 			<div class="picker">
-				<p class="note">Klikom na "primjeni" županije će se obojati u skladu sa vrijednošću BDP-a za odabranu godinu.</p>
-				Odaberite godinu
-				<select name="years" id="yearSelect">
-					<option value="1996">1996</option>
-					<option value="1997">1997</option>
-					<option value="1998">1998</option>
-					<option value="1999">1999</option>
-					<option value="2000">2000</option>
-					<option value="2001">2001</option>
-					<option value="2002">2002</option>
-					<option value="2003">2003</option>
-					<option value="2004">2004</option>
-					<option value="2005">2005</option>
-					<option value="2006">2006</option>
-					<option value="2007">2007</option>
-					<option value="2008">2008</option>
-					<option value="2009">2009</option>
-					<option value="2010">2010</option>
-					<option value="2011">2011</option>
-					<option value="2012">2012</option>
-					<option value="2013">2013</option>
-					<option value="2014">2014</option>
-					<option value="2015">2015</option>
-					<option value="2016">2016</option>
-					<option value="2017">2017</option>
-					<option value="2018">2018</option>					
-				</select>
-				<button id="gradientBtn" class="btn btn-info btn-sm ml-2">Primjeni</button>
+				<p class="note">Pomicanjem klizača županije će se obojati u skladu sa vrijednošću BDP-a za odabranu godinu.</p>
+				<p id="selectedYear">Pomaknite klizač</p>
+				<input type="range" min="1996" max="2018" step="1" class="myInput"
+  					 oninput="gradientFunction(this.value)">				
 				<button id="deleteGradient" class="btn btn-danger btn-sm ">Poništi</button>
 			</div>
 			<div id="main" style="z-index: 0; position:absolute"></div>		
@@ -86,6 +62,7 @@
 		var height = 700;
 		var clicked;
 		var gradientOn = false;
+		var opacities = [];
 		var allData = [];
 		var avg = new Uint32Array(23);
 		var colors = ['rgb(255, 17, 0)']
@@ -98,21 +75,41 @@
  			.projection(projection);
 		//kontenjer svg
 
+		function gradientFunction(year){
+			$("#selectedYear").text(year)
+			gradientOn = true;
+			 var zu = d3.selectAll(".county")
+			 var max = 0;
+			 var min = 100000;			
+			 zu[0].forEach(zup => {				 
+				bdp = zup.__data__.properties.BDP[year+"."]
+				bdp = Number(bdp.replace(",",""))				
+				if(bdp>max) max = bdp
+				if(bdp<min) min = bdp
+			 })		 			 
+			 zu[0].forEach(zup => {
+				bdp = zup.__data__.properties.BDP[year+"."]
+				bdp = Number(bdp.replace(",",""))				
+				var each = d3.select("#"+zup.id)
+				.attr("fill","#0000ff")
+				.style("opacity",function(){
+					var normalized = (bdp-min)/(max - min);
+					opacities[""+zup.id] = normalized;
+					return normalized;
+				})
+			 }) 			 
+		}
 		 $("#gradientBtn").click(function(){
 			gradientOn = true;
 			 var zu = d3.selectAll(".county")
 			 var max = 0;
 			 var min = 100000;			
-			 zu[0].forEach(zup => {
-				 console.log(zup)
+			 zu[0].forEach(zup => {				 
 				bdp = zup.__data__.properties.BDP[yearSelect.value+"."]
 				bdp = Number(bdp.replace(",",""))				
 				if(bdp>max) max = bdp
 				if(bdp<min) min = bdp
-			 })
-			 console.log(max)
-			 console.log(min)
-			 
+			 })		 			 
 			 zu[0].forEach(zup => {
 				bdp = zup.__data__.properties.BDP[yearSelect.value+"."]
 				bdp = Number(bdp.replace(",",""))				
@@ -120,9 +117,10 @@
 				.attr("fill","#0000ff")
 				.style("opacity",function(){
 					var normalized = (bdp-min)/(max - min);
+					opacities[""+zup.id] = normalized;
 					return normalized;
 				})
-			 }) 
+			 }) 			 
 		 }) 
 		 $("#deleteGradient").click(function(){
 			 gradientOn = false;
@@ -147,30 +145,35 @@
 			calculateAvgs(data.features)
  			var states = svg.selectAll("path.county")
  			.data(data.features)
-			 .enter()
-			 .append("g")			 
-			 .append("path")			 
+			.enter()
+			.append("g")			 
+			.append("path")			 
  			.on("mouseover", function(d){
 				var path = d3.select("#"+d.id);
 				d3.select("#show").html(d.properties.name)				
 				.style("display", "inline-block")
-				if(!gradientOn)
-				path.attr("fill", "#0c6091")	
-								
+				if(!gradientOn){
+					path.attr("fill", "#0c6091")
+				}else{
+					path.style("opacity","1");
+				}												
 			})				
 			.on("mouseleave",function(d,i){
 				d3.select("#show")				
 				.style("display", "none")
 				var path = d3.select("#"+d.id);	
-				if(!gradientOn)
-				path.attr("fill", "#42b3f5") 			
+				if(!gradientOn){
+					path.attr("fill", "#42b3f5") 
+				}else{
+					path.style("opacity",opacities[""+d.id]);
+				}
+							
 			})
 			.on("click",function(d){				
 				var path = d3.select("#"+d.id);
 				var data = d.properties;				
 				removeGraph();				
-				setTimeout(() => { drawGraph(data);  }, 300);								
-				
+				setTimeout(() => { drawGraph(data);  }, 300);											
 			})
 			.attr("class", "county")					 
  			.attr("id", function(d) { return d.id; })
@@ -572,12 +575,21 @@
 	margin-left: auto;
 	margin-right: auto;
 	width: 400px;
-	padding : 10px;
+	padding-top : 10px;
+	margin-bottom: 2px;
+}
+#selectedYear{
+	width: 150px;
+	margin-left: auto;
+	margin-right: auto;
+	margin-top: 0px;
+	margin-bottom: 0px;
 }
 footer{
 	margin-top: 230px;
-	
-	
+}
+.myInput{
+	width: 300px;
 }
 .foter-info{
 	font-size: 1.3em;
@@ -618,8 +630,13 @@ svg{
 #main{
 	width: 100%;
 }
+
 rect{
 	transition: y 0.3s ease-in 0s ;	
+}
+.county{
+	transition: opacity 0.2s ease-out 0.1s;
+	transition: fill 0.2s ease-out 0.1s;
 }
 .avg{
 	transition: fill 0.2s ease-in 0.3s;
