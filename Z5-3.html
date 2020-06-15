@@ -33,7 +33,7 @@
 				</div>			
 		</div>
 	</div>
-	<div class="modal fade  bd-example-modal-lg" id="exampleModalCenter" tabindex="-1" role="dialog" aria-labelledby="exampleModalCenterTitle" aria-hidden="true">
+	<div class="modal fade  bd-example-modal-lg" id="detailedModal" tabindex="-1" role="dialog" aria-labelledby="detailedModalTitle" aria-hidden="true">
 		<div class="modal-dialog modal-dialog-centered modal-lg" role="document">
 		  <div class="modal-content">
 			<div class="modal-header">
@@ -50,22 +50,26 @@
 	  </div>	
 	  <footer class="text-center">
 		  <div class="foter-info">Made on FERIT - Jakov Sudar</div>
+		  <div class="credits">Podaci preuzeti sa: https://www.dzs.hr/Hrv/publication/StatisticsInLine.htm</div>
+		  
 	  </footer>
     <script> 	
 		
-		$('#exampleModalCenter').on('hidden.bs.modal', function (e) {
+		$('#detailedModal').on('hidden.bs.modal', function (e) {
 			$("#detailGraph").children().remove();			
 		  })	
 
 		var pie = false;
 		var width = 960;
-		var height = 700;
-		var clicked;
+		var height = 700;		
 		var gradientOn = false;
+		//za vrijednosti prozirnosti svake županije
 		var opacities = [];
+		//podaci iz jsona
 		var allData = [];
+		//prosjecne vrijednosti bdpa za svaku godinu
 		var avg = new Uint32Array(23);
-		var colors = ['rgb(255, 17, 0)']
+		
 		var projection = d3.geo.mercator()
  			.center([0, 10])
  			.scale(6000)
@@ -80,13 +84,15 @@
 			gradientOn = true;
 			 var zu = d3.selectAll(".county")
 			 var max = 0;
-			 var min = 100000;			
+			 var min = 100000;
+			 //racunanje minimalnog i maksimalnog bdpa za odabranu godinu			
 			 zu[0].forEach(zup => {				 
 				bdp = zup.__data__.properties.BDP[year+"."]
 				bdp = Number(bdp.replace(",",""))				
 				if(bdp>max) max = bdp
 				if(bdp<min) min = bdp
-			 })		 			 
+			 })		 
+			 //postavljanje prozirnosti za svaku zupaniju			 
 			 zu[0].forEach(zup => {
 				bdp = zup.__data__.properties.BDP[year+"."]
 				bdp = Number(bdp.replace(",",""))				
@@ -99,29 +105,7 @@
 				})
 			 }) 			 
 		}
-		 $("#gradientBtn").click(function(){
-			gradientOn = true;
-			 var zu = d3.selectAll(".county")
-			 var max = 0;
-			 var min = 100000;			
-			 zu[0].forEach(zup => {				 
-				bdp = zup.__data__.properties.BDP[yearSelect.value+"."]
-				bdp = Number(bdp.replace(",",""))				
-				if(bdp>max) max = bdp
-				if(bdp<min) min = bdp
-			 })		 			 
-			 zu[0].forEach(zup => {
-				bdp = zup.__data__.properties.BDP[yearSelect.value+"."]
-				bdp = Number(bdp.replace(",",""))				
-				var each = d3.select("#"+zup.id)
-				.attr("fill","#0000ff")
-				.style("opacity",function(){
-					var normalized = (bdp-min)/(max - min);
-					opacities[""+zup.id] = normalized;
-					return normalized;
-				})
-			 }) 			 
-		 }) 
+		 
 		 $("#deleteGradient").click(function(){
 			 gradientOn = false;
 			 var zu = d3.selectAll(".county")
@@ -129,7 +113,7 @@
 			 .style("opacity","1")
 		 })
 
-
+		//kreiranje karte 
 		var svg = d3.select("#main").append("svg")			
  			.attr("width", width)
  			.attr("height", height)
@@ -147,7 +131,7 @@
  			.data(data.features)
 			.enter()
 			.append("g")			 
-			.append("path")			 
+			.append("path")						 
  			.on("mouseover", function(d){
 				var path = d3.select("#"+d.id);
 				d3.select("#show").html(d.properties.name)				
@@ -182,8 +166,7 @@
 			.style("stroke-width", 1)
 			.style("stroke", "black")
  			.style("stroke-opacity", 1);	
-		});
-	
+		});	
 		
         document.onmousemove = function(e) { 
             var x = e.clientX; 
@@ -402,7 +385,9 @@
 				d3.select("#show")				
 				.style("display", "none")						
 			})
-			
+
+			//kreiranje linije za prosjek
+
 			var avgline = d3.svg.line()
 				.x(function(d, i) {
 					if(i==20){
@@ -411,8 +396,11 @@
 					 return x(i); 
 					})
 				.y(function(d) { return height - (height-y(d)) -mb; });
-			var avgs = Array(21).fill(avg[year]); 
-			console.log(avgs)
+
+			//popunimo polje od 21 element sa prosjecnom vrijednosti za tu godinu
+			//te to polje koristimo za kreiranje linije
+
+			var avgs = Array(21).fill(avg[year]); 			
 			var linechart = svg.append("path")				
 				.attr("class", "line")
 				.attr("d", avgline(avgs))
@@ -424,6 +412,8 @@
 					.text("Prosjek")
 		}
 
+		//funkcija koja ce izracunati prosjecan bdp za svaku godinu te 
+		//podatke pohraniti u globalnu varijablu avg[]
 		function calculateAvgs(data){			
 			data.forEach(zu=>{
 				var bdp = (zu.properties.BDP)
@@ -435,6 +425,7 @@
 			})						
 		}
 
+		//funkcija koja kreira osnovni graf sa podacima o bdpu za odabranu zupaniju		
 		function drawGraph(data){
 			clicked = (data.name)
 			var width = 759;
@@ -442,8 +433,10 @@
 			var mb= 45;
 			var ml = 50;
 			var res = getDataFromObject(data.BDP)	
+
 			var values = res[1][0]
-			var years = res[0][0]						
+			var years = res[0][0]	
+			console.log(res)					
 
 			var svg = d3.select("#graph")
 				.append("svg")
@@ -468,8 +461,7 @@
 			var yAxis = d3.svg.axis()
 				.scale(y)
 				.orient("left")
-				.ticks(10);
-				
+				.ticks(10);				
 
 			svg.append("g")
 				.attr("class", "x axis")
@@ -492,7 +484,7 @@
 				.append("rect")				
 				.attr("class", "bar")
 				.attr("data-toggle", "modal")
-				.attr("data-target","#exampleModalCenter")
+				.attr("data-target","#detailedModal")
 				.attr("x", function(d, i) { return x(i); })				
 				.attr("y", height)
 				.attr("width", 25)
@@ -510,7 +502,7 @@
 				.on("click",function(d,i){
 					drawDetailGraph(i)						
 				})
-				//stvarna visina stupca - za animaciju
+				//stvarna visina stupca - animacija
 				svg.selectAll("rect")
 					.transition()
 					.duration(200)
@@ -529,7 +521,7 @@
 					.attr("y", function(d,i) { return height-mb ; })
 					.attr("height", 1)					
 					.attr("fill", "none")					
-				//stvarna vrijednost prosjeka
+				//stvarna vrijednost prosjeka - animacija
 				svg.selectAll(".avg")
 					.transition()
 					.duration(300)
@@ -541,17 +533,20 @@
 				
 		}
 		
+		//funkcija koja brise osnovni graf
 		function removeGraph(){
 			var svg = d3.select("#graph")
 			var barchart = svg.selectAll("rect")
 			var numBars = (barchart[0].length)
 			for(var i=0;i<numBars;i++){
-				barchart[0][i].setAttribute("y","500px")	
+				barchart[0][i].setAttribute("y","500px") // Ovo se radi zbog animacije	
 			}
-			setTimeout(() => { $("#graph").children().remove()}, 300);
-					
+			//kad je animacija prosla, brisemo sve rect elemente
+			setTimeout(() => { $("#graph").children().remove()}, 300);					
 		}
 
+		//funkcija za predani bdp objekt vraca 2 arraya gdje jedan
+		//sadrzava vrijednosti bdpa a drugi vrijednosti godina.
 		function getDataFromObject(bdpObject){
 			var bdpNumbers =[]
 			var years= []
@@ -635,11 +630,11 @@ rect{
 	transition: y 0.3s ease-in 0s ;	
 }
 .county{
-	transition: opacity 0.2s ease-out 0.1s;
-	transition: fill 0.2s ease-out 0.1s;
+	transition: opacity 0.4s ease 0.2s;
+	transition: fill 0.2s ease 0s;
 }
 .avg{
-	transition: fill 0.2s ease-in 0.3s;
+	transition: fill 0.2s ease-in 0s;
 }
 
 h3 {     
