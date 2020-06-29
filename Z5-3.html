@@ -15,7 +15,7 @@
 <body>	
 	<div class="row">			
 		<div class="col-6">			
-			<div class="picker">
+			<div class="picker" id="picker">
 				<p class="note">Pomicanjem klizača županije će se obojati u skladu sa vrijednošću BDP-a za odabranu godinu.</p>
 				<p id="selectedYear">Pomaknite klizač</p>
 				<input type="range" min="1996" max="2018" step="1" class="myInput"
@@ -26,10 +26,12 @@
 			<div  id="show" style="z-index: 2147483647; position:absolute"></div>
 		</div>	
 		<div class="col-5" >			
-				<h3 class="text-center mt-4">Odaberite županiju</h3>
+				<h3 class="text-center mt-4"><p id="zu-title" style="display: inline;">Odaberite županiju</p>   <button class="btn btn-info" id="compareBtn" style="visibility: hidden;">Usporedi</button></h3>
+				
 				<div id="graph" class="text-center"></div>
 				<div id="info" class="info">U grafu su prikazani podaci o BDP-u po godinama za odabranu županiju.<br>
-					Crne crtice predstavljaju prosječan BDP u zemlji za tu godinu. Klikom na neki od stupaca dobiva se prikaz BDP-a u svim županijama za tu godinu.
+					Crne crtice predstavljaju prosječan BDP u zemlji za tu godinu. Klikom na neki od stupaca dobiva se prikaz BDP-a u svim županijama za tu godinu. <br>
+					Prilikom usporedbe dvije županije crvena crtica predstavlja BDP drugoodabrane županije dok zeleni stupac predstavlja BDP prve županije.
 				</div>			
 		</div>
 	</div>
@@ -58,7 +60,9 @@
 		$('#detailedModal').on('hidden.bs.modal', function (e) {
 			$("#detailGraph").children().remove();			
 		  })	
-
+		var comparedOn = false;
+		var compare = false;
+		var axis = 1;
 		var pie = false;
 		var width = 960;
 		var height = 700;		
@@ -69,6 +73,8 @@
 		var allData = [];
 		//prosjecne vrijednosti bdpa za svaku godinu
 		var avg = new Uint32Array(23);
+		//Spremaju se podaci o BDPu za drugoodabranu županiju
+		var compared=[];
 		
 		var projection = d3.geo.mercator()
  			.center([0, 10])
@@ -78,17 +84,26 @@
 		var path = d3.geo.path()
  			.projection(projection);
 		//kontenjer svg
-
+		var svg = d3.select("#picker")
+		.append("svg")			
+		.attr("id","legend")
+		.attr("width", 420)
+		.attr("height", 80)
 		function gradientFunction(year){
+			
 			$("#selectedYear").text(year)
 			gradientOn = true;
 			 var zu = d3.selectAll(".county")
 			 var max = 0;
 			 var min = 100000;
+			 //koristiti će se kasnije za kreiranje legende
+			 var bdps = [];
+			 var normalizes = [];
 			 //racunanje minimalnog i maksimalnog bdpa za odabranu godinu			
 			 zu[0].forEach(zup => {				 
 				bdp = zup.__data__.properties.BDP[year+"."]
-				bdp = Number(bdp.replace(",",""))				
+				bdp = Number(bdp.replace(",",""))	
+				bdps.push(bdp)			
 				if(bdp>max) max = bdp
 				if(bdp<min) min = bdp
 			 })		 
@@ -101,9 +116,53 @@
 				.style("opacity",function(){
 					var normalized = (bdp-min)/(max - min);
 					opacities[""+zup.id] = normalized;
+					normalizes.push(normalized);
 					return normalized;
 				})
-			 }) 			 
+			 }) 	
+			 bdps.sort();
+			 normalizes.sort();
+			 console.log("BDPS: "+ bdps)	
+			 console.log("normal: "+ normalizes)	 
+			 createLegend(bdps, normalizes)
+		}
+		//kreiranje legende koja pokazuje koju vrijednost predstavlja koja nijansa boje na karti
+		function createLegend(bdps, normalizes){
+			var lWidht = 18;
+			var lHeight = 20;
+			var x = d3.scale.ordinal()
+				.domain(d3.range(21))
+				.rangeRoundBands([0, 378]);
+			var xAxis = d3.svg.axis()	
+				.scale(x)			
+				.orient("bottom")
+				.tickFormat(function(d, i) { 
+					return(bdps[i]); 
+				})
+			var svg = d3.select("#legend")
+			$("#legend").children().remove();
+			svg.append("g")
+				.attr("class", "x axis")
+				.attr("transform", "translate(0,30 )")
+				.call(xAxis)
+				.selectAll("text")
+				.attr("transform", "translate(-15,6) rotate(-90)")
+				.style("text-anchor", "end");
+			var legendBars = svg.selectAll("rect")			
+				.data(normalizes)
+				.enter()
+				.append("rect")	
+				.attr("class", "bar")
+				.attr("x", function(d, i) { return x(i)})						
+				.attr("width", lWidht)
+				.attr("y",9)
+				.attr("height",lHeight)							
+				.attr("fill","#0000ff")
+				.style("opacity",function(d,i){
+					return normalizes[i]
+				})
+				
+				
 		}
 		 
 		 $("#deleteGradient").click(function(){
@@ -116,7 +175,7 @@
 		//kreiranje karte 
 		var svg = d3.select("#main").append("svg")			
  			.attr("width", width)
- 			.attr("height", height)
+ 			.attr("height", height-60)
  			.style("background", "white")
  			.call(d3.behavior.zoom().on("zoom", function () {
    				 svg.attr("transform", "translate(" + d3.event.translate + ")" + " scale(" + d3.event.scale + ")")
@@ -155,9 +214,16 @@
 			})
 			.on("click",function(d){				
 				var path = d3.select("#"+d.id);
-				var data = d.properties;				
-				removeGraph();				
-				setTimeout(() => { drawGraph(data);  }, 300);											
+				var data = d.properties;						
+				
+				if(compare == true){
+					drawCompared(data);
+				}else{
+					removeGraph();
+					setTimeout(() => { drawGraph(data);  }, 300);	
+						
+				}			
+													
 			})
 			.attr("class", "county")					 
  			.attr("id", function(d) { return d.id; })
@@ -168,6 +234,8 @@
  			.style("stroke-opacity", 1);	
 		});	
 		
+		
+
         document.onmousemove = function(e) { 
             var x = e.clientX; 
             var y = e.clientY; 
@@ -230,7 +298,7 @@
 
 		function appendPie(year){
 			$("#detailSvg").children().remove();
-			var outerRadius = 200;
+			var outerRadius = 170;
 			var innerRadius = 100;
 			var pieData = [];
 			var width = 759;
@@ -362,11 +430,11 @@
 			.attr("width", 25)
 			.attr("y",function(d,i){
 				var value= (d.properties.BDP[year+1996+"."]).replace(",","");
-				return height - (height-y(value))-mb
+				return height - (height-y(value))-mb-axis
 			})
 			.attr("height", function(d,i) {
 				var value= (d.properties.BDP[year+1996+"."]).replace(",","");
-				return height -y(value); 				
+				return height -y(value) ; 				
 			 })				
 			
 			.attr("fill", function(d,i){
@@ -425,8 +493,54 @@
 			})						
 		}
 
+		//funkcija koja iscrtava podatke za zupaniju koju usporedujemo sa prethodno odabranom
+		function drawCompared(data){
+			var width = 759;
+			var height = 400;
+			var mb= 45;
+			var ml = 50;
+			var res = getDataFromObject(data.BDP)	
+			comparedOn = true
+			var values = res[1][0]
+			var years = res[0][0]	
+			compared = values;			
+			var svg = d3.select(".svgGraph")
+			var x = d3.scale.ordinal()
+				.domain(d3.range(23))
+				.rangeRoundBands([ml, width]);
+			var y = d3.scale.linear()
+				.domain([0, 7187])
+				.range([height, mb+20]);
+
+			$(".avg").remove();
+			var comapreBars = svg.selectAll("h1")
+				.data(values)
+				.enter()
+				.append("rect")				
+				.attr("class", "compare-bar")				
+				.attr("x", function(d, i) { return x(i); })				
+				.attr("y", height)
+				.attr("width", 25)
+				.attr("height",0)
+				.attr("fill", "#ff1100")
+				compare = false
+			svg.selectAll(".compare-bar")
+				.transition()
+				.duration(20)
+				.attr("y", function(d,i) {
+									
+					 return height - (height-y(d))-mb-axis ; })
+				.attr("height", "1" )									
+				.delay(0)
+			
+			$("#compareBtn").css("visibility","hidden")			
+			var str  = $("#zu-title").text()
+			str = str + " - " + data.name;
+			$("#zu-title").text(str)
+		}
 		//funkcija koja kreira osnovni graf sa podacima o bdpu za odabranu zupaniju		
 		function drawGraph(data){
+			comparedOn = false
 			clicked = (data.name)
 			var width = 759;
 			var height = 400;
@@ -436,7 +550,7 @@
 
 			var values = res[1][0]
 			var years = res[0][0]	
-			console.log(res)					
+								
 
 			var svg = d3.select("#graph")
 				.append("svg")
@@ -490,10 +604,17 @@
 				.attr("width", 25)
 				.attr("height",0)
 				.attr("fill", "#87e09f")
-				.on("mouseover", function(d,i){																
-					d3.select("#show").html("BDP:"+d+"<br>Avg:"+avg[i])
-					.style("border", "1px solid black")		
-					.style("display", "inline-block")													
+				.on("mouseover", function(d,i){						
+					if(comparedOn){
+						d3.select("#show").html("BDP:"+d+"<br>Compared:"+compared[i])
+						.style("border", "1px solid black")		
+						.style("display", "inline-block")
+					}else{
+						d3.select("#show").html("BDP:"+d+"<br>Avg:"+avg[i])
+						.style("border", "1px solid black")		
+						.style("display", "inline-block")	
+					}														
+																	
 				})
 				.on("mouseleave",function(d,i){
 					d3.select("#show")				
@@ -506,7 +627,7 @@
 				svg.selectAll("rect")
 					.transition()
 					.duration(200)
-					.attr("y", function(d,i) { return height - (height-y(d))-mb ; })
+					.attr("y", function(d,i) { return height - (height-y(d))-mb-axis ; })
 					.attr("height", function(d,i) { return height -y(d) })									
 					.delay(0)
 
@@ -528,10 +649,16 @@
 					.attr("y", function(d,i) { return height -(height-y(d))-mb ; })
 					.attr("fill", "black")	
 					.delay(500)
-				setTimeout(() => { $("h3").html(data.name)  }, 400);
+				setTimeout(() => { 
+					$("#zu-title").html(data.name)  
+					$("#compareBtn").css("visibility","visible")
 				
-				
+				}, 400);				
 		}
+		$("#compareBtn").click(function(){
+			compare = true
+			alert("Odaberite županiju za usporedbu")
+		})
 		
 		//funkcija koja brise osnovni graf
 		function removeGraph(){
@@ -641,5 +768,11 @@ h3 {
     margin-right: auto;
     margin-left: auto;       
 }
-
+.axis path,
+.axis line {
+  fill: none;
+  stroke: #000;
+  shape-rendering: crispEdges;
+  stroke-width: 2px;
+}
 </style>
